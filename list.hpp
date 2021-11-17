@@ -2,7 +2,7 @@
 #include <stdexcept>
 
 template<typename T>
-class node {
+struct node {
 	T value;
 	node<T>* next;
 };
@@ -14,7 +14,7 @@ class list {
 public:
 	std::size_t size() const {
 		std::size_t counter = 0;
-		for(auto* it = head; it != nullptr; ++counter, it = it.head) ;
+		for(node<T>* it = head; it != nullptr; ++counter, it = it->next) ;
 		return counter;
 	}
 	bool empty() const {
@@ -22,14 +22,14 @@ public:
 	}
 
 	const T& value_at(std::size_t index) const {
-		auto* it = head;
-		for(; index != 0; it = it.next, --index) ;
-		return it.value;
+		node<T>* it = head;
+		for(; index != 0; it = it->next, --index) ;
+		return it->value;
 	}
 	T& value_at(std::size_t index) {
-		auto* it = head;
-		for(; index != 0; it = it.next, --index) ;
-		return it.value;
+		node<T>* it = head;
+		for(; index != 0; it = it->next, --index) ;
+		return it->value;
 	}
 
 	void push_front(const T& value) {
@@ -40,9 +40,9 @@ public:
 		if(head == nullptr) {
 			throw std::runtime_error{UNDERFLOW_MSG};
 		}
-		T& result = head.value;
+		T& result = head->value;
 
-		auto* next_node = head.next;
+		node<T>* next_node = head->next;
 		delete head;
 		head = next_node;
 		
@@ -51,24 +51,24 @@ public:
 
 	void push_back(const T& value) {
 		if(head == nullptr) {
-			head = new node<T>{value, head};
+			head = new node<T>{value, nullptr};
 		} else {
-			auto* it = head;
-			for(; it.next != nullptr; it = it.next) ;
-			it.next = new node<T>{value, head};
+			node<T>* it = head;
+			for(; it->next != nullptr; it = it->next) ;
+			it->next = new node<T>{value, nullptr};
 		}
 	}
 	T& pop_back() {
 		if(head == nullptr) {
 			throw std::runtime_error{UNDERFLOW_MSG};
 		} 
-		auto* it = head;
-		for(; it->next->next != nullptr; it = it.next) ;
+		node<T>* it = head;
+		for(; it->next->next != nullptr; it = it->next) ;
 		
 		T& result = it->next->value;
 
-		delete it.next;
-		it.next = nullptr;
+		delete it->next;
+		it->next = nullptr;
 
 		return result;
 	}
@@ -81,13 +81,13 @@ public:
 	}
 
 	const T& back() const {
-		const auto* it = head;
-		for(; it->next != nullptr; it = it.next) ;
+		const node<T>* it = head;
+		for(; it->next != nullptr; it = it->next) ;
 		return it->value;
 	}
 	T& back() {
-		auto* it = head;
-		for(; it->next != nullptr; it = it.next) ;
+		node<T>* it = head;
+		for(; it->next != nullptr; it = it->next) ;
 		return it->value;
 	}
 
@@ -95,65 +95,69 @@ public:
 		if(index >= this->size()) {
 			throw std::runtime_error{"Fuck you, I can't reach this index"};
 		}
-		auto* it = head;
-		auto* previous = nullptr;
+		node<T>* it = head;
+		node<T>* previous = nullptr;
 
-		for(; index; --index, previous = it, it = it.next) ;
+		for(; index; --index, previous = it, it = it->next) ;
 
-		node<T>* new_element = new node{value, it};
+		node<T>* new_element = new node<T>{value, it};
 		previous->next = new_element;
 	}
 	void erase(std::size_t index) {
 		if(index >= this->size()) {
 			throw std::runtime_error{"Fuck you, I can't reach this index"};
 		}
-		auto* it = head;
-		auto* previous = nullptr;
+		node<T>* it = head;
+		node<T>* previous = nullptr;
 
-		for(; index; --index, previous = it, it = it.next) ;
+		for(; index; --index, previous = it, it = it->next) ;
 
 		previous->next = it->next;
 		delete it;
 	}
 
 	const T& value_n_from_end(std::size_t n) const {
-		auto* it = head;
-		for(; n; --n, it = it.next) ;
+		node<T>* it = head;
+		for(; n; --n, it = it->next) ;
 		return it->value;
 	}
 	T& value_n_from_end(std::size_t n) {
-		auto* it = head;
-		for(; n; --n, it = it.next) ;
+		node<T>* it = head;
+		for(; n; --n, it = it->next) ;
 		return it->value;
 	}
 
 	/// If there are 0 -> 1 -> 2 -> 3
 	/// After reverse it'll become 3 -> 2 -> 1 -> 0
 	/// --------------
-	/// it.next = previous
+	/// it->next = previous
 	/// head = last
 	void reverse() {
-		auto* it = head;
-		for(auto* previous = nullptr; it.next != nullptr; previous = it, it = it.next) {
-			it.next = previous;
+		node<T>* following = head;
+		node<T>* it = head;
+		node<T>* previous = nullptr;
+
+		for(; it != nullptr; previous = it, it = following) {
+			following = it->next;
+			it->next = previous;
 		}
-		head = it;
+		head = previous;
 	}
 
 	void remove_value(const T& value) {
 		bool found = false;
-		auto* it = head;
-		auto* previous = nullptr;
+		node<T>* it = head;
+		node<T>* previous = nullptr;
 
-		for(; it.next != nullptr; previous = it, it = it.next) {
-			if(it.value == value) {
+		for(; it->next != nullptr; previous = it, it = it->next) {
+			if(it->value == value) {
 				found = true;
 				break;
 			}
 		}
 
 		if(!found) { 
-			return 0;
+			return;
 		}
 
 		previous->next = it->next;
